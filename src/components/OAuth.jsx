@@ -12,7 +12,7 @@ const OAuth = () => {
         try {
             const auth = getAuth();
             const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider)
+            const result = await signInWithPopup(auth, provider);
             const user = result.user;
             // check if the user already exists in the db
             const docRef = doc(db, "users", user.uid);

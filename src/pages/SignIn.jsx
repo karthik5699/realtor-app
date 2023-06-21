@@ -1,10 +1,15 @@
 /* eslint-disable react/no-unescaped-entities */
 import { useState } from "react";
 import {AiFillEyeInvisible, AiFillEye} from 'react-icons/ai';
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import OAuth from "../components/OAuth";
 
+import { signInWithEmailAndPassword, getAuth } from "firebase/auth";
+import { toast } from "react-toastify";
+
 const SignIn = () => {
+
+    const navigate = useNavigate();
 
     const [showPassword, setShowPassword] = useState(false);
 
@@ -19,6 +24,19 @@ const SignIn = () => {
         setFormData((prevState) => ({...prevState, [e.target.id]: e.target.value}))
     }
 
+    const onSubmit = async (event) => {
+        event.preventDefault();
+        try {
+            const auth = getAuth();
+            const userCredentials = await signInWithEmailAndPassword(auth, email, password);
+            if(userCredentials.user){
+                navigate("/")
+            }
+        } catch (error) {
+            toast.error("Invalid user credentials")
+        }
+    }
+
     return (
         <section>
             <h1 className="text-3xl text-center mt-6 font-bold">Sign In</h1>
@@ -29,7 +47,7 @@ const SignIn = () => {
                     />
                 </div>
                 <div className="w-full md:w-[67%] lg:w-[40%] lg:ml-20">
-                    <form>
+                    <form onSubmit={onSubmit}>
                         <input className="mb-6 w-full px-4 py-2 text-xl text-gray-700 bg-white border-gray-300 
                                          rounded transition ease-in-out" 
                                type="email" id="email" value={email} onChange={onChange} placeholder="Email"/>
