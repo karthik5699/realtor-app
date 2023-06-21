@@ -34,8 +34,8 @@ const SignUp = () => {
         const auth = getAuth();
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         updateProfile(auth.currentUser, {
-          displayName: name
-        })
+          displayName: name,
+        });
         const user = userCredential.user;
         // to save in a firebase database
 
