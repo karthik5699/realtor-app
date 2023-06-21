@@ -1,9 +1,23 @@
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom"
 
 
 const Header = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const [pageState, setPageState] = useState("Sign in");
+    const auth = getAuth();
+
+    useEffect(() => {
+        onAuthStateChanged(auth, (user) => {
+            if(user){
+                setPageState("Profile")
+            } else{
+                setPageState("Sign in")
+            }
+        })
+    }, [auth])
 
     function pathMatchRoute(route) {
         if (route === location.pathname) {
@@ -11,7 +25,7 @@ const Header = () => {
         }
     }
     return (
-        <div className="bg-gray-800 border-b shadow-sm sticky top-0 z-50">
+        <div className="bg-gray-800 border-b shadow-sm sticky top-0 z-40">
             <header className="flex justify-between items-center px-3 max-w-6xl mx-auto">
                 <div>
                     <img src="https://teja8.kuikr.com/cfassets/images/cf_logo_new.webp" 
@@ -28,8 +42,19 @@ const Header = () => {
                             Offers
                         </li>
                         <li className={`cursor-pointer py-3 text-sm font-semibold border-b-[3px] border-b-transparent 
-                                      ${pathMatchRoute("/sign-in") && "text-white border-b-red-600"}`} onClick={() => navigate("/sign-in")}>
-                            Sign In
+                                      ${(pathMatchRoute("/sign-in") || pathMatchRoute("/profile")) && 
+                                      "text-white border-b-red-600"}`} 
+                                      onClick={() => {
+                                                        if(pageState==="Profile"){
+                                                            navigate("/profile")
+                                                        } else{
+                                                            navigate("/sign-in")
+                                                        }
+                                        
+                                        }
+                                      }
+                        >
+                            {pageState}
                         </li>
                     </ul>
                 </div>
