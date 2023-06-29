@@ -1,6 +1,21 @@
+/* eslint-disable no-unused-vars */
 import { useState } from "react"
+import Spinner from "../components/Spinner";
+import { toast } from "react-toastify";
+import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
+import { getAuth } from "firebase/auth";
+import {v4 as uuidv4} from "uuid";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
+import { useNavigate } from "react-router";
+
 
 const CreateListing = () => {
+    const auth = getAuth();
+    const navigate = useNavigate();
+    const [geoLocationEnabled, setGeoLocationEnabled] = useState(false);
+    const [loading, setLoading] = useState(false);
+
     const [formData, setFormData] = useState({
         type: "rent",
         name: "",
@@ -13,18 +28,124 @@ const CreateListing = () => {
         offer: false,
         regularPrice: 0,
         discountedPrice: 0,
+        latitude: 0,
+        longitude: 0,
+        images: {}
     })
-    const {type, name, bedrooms, bathrooms, parking, furnished, address, description, offer, regularPrice, discountedPrice} = formData;
+    const {type, name, bedrooms, bathrooms, parking, furnished, address, description, offer, regularPrice, discountedPrice, latitude, longitude, images} = formData;
+    
     const onChange = (event) => {
-        if(event.target.id === "type"){
-            setFormData((prevState) => ({...prevState, type: event.target.value}))
+        let boolean = null;
+        if(event.target.value === "true"){
+            boolean = true;
+        }
+        if(event.target.value === "false"){
+            boolean = false;
+        }
+
+        if(event.target.files) {
+            setFormData((prevState) => ({
+                ...prevState,
+                images: event.target.files
+            }))
+        }
+
+        if (!event.target.files) {
+            setFormData((prevState) => ({
+                ...prevState,
+                [event.target.id]: boolean ?? event.target.value
+            }))
         }
         
     }
+
+    const storeImage = async(image) => {
+        return new Promise((resolve, reject) => {
+            const storage = getStorage();
+            const fileName = `${auth.currentUser.uid}-${image.name}-${uuidv4()}`
+            const storageRef = ref(storage, fileName)
+            const uploadTask = uploadBytesResumable(storageRef, image);
+
+            // Register three observers:
+            // 1. 'state_changed' observer, called any time the state changes
+            // 2. Error observer, called on failure
+            // 3. Completion observer, called on successful completion
+            uploadTask.on('state_changed', 
+            (snapshot) => {
+                // Observe state change events such as progress, pause, and resume
+                // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                console.log('Upload is ' + progress + '% done');
+                switch (snapshot.state) {
+                case 'paused':
+                    console.log('Upload is paused');
+                    break;
+                case 'running':
+                    console.log('Upload is running');
+                    break;
+                }
+            }, 
+            (error) => {
+                reject(error);
+            }, 
+            () => {
+                // Handle successful uploads on complete
+                // For instance, get the download URL: https://firebasestorage.googleapis.com/...
+                getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+                resolve(downloadURL);
+                });
+            }
+            );
+
+        })
+    }
+
+    const onSubmit = async (event) => {
+        event.preventDefault();
+        setLoading(true);
+        if(discountedPrice >= regularPrice){
+            setLoading(false);
+            toast.error("Discount price must be less than regular price");
+            return;
+        }
+        if(images.length > 6){
+            toast.error("Choose < 6 images");
+            return;
+        }
+        let geoLocation = {};
+        geoLocation.lat = latitude;
+        geoLocation.lng = longitude;
+
+        const imgUrls = await Promise.all(
+            [...images].map((image) => storeImage(image))).catch((error)=>{
+                setLoading(false)
+                toast.error("Images were not uploaded")
+                return;
+            }
+        )
+        const formDataCopy = {
+            ...formData,
+            imgUrls,
+            timestamp: serverTimestamp(),
+        };
+        delete formDataCopy.images;
+        !formDataCopy.offer && delete formDataCopy.discountedPrice;
+        const docRef = await addDoc(collection(db, "listings"), formDataCopy);
+        setLoading(false);
+        toast.success("Listing successful!");
+        navigate(`/category/${formDataCopy.type}/${docRef.id}`)
+    }
+
+    
+
+    if(loading){
+        return <Spinner />
+    }
+
     return (
         <main className="max-w-md px-2 mx-auto">
             <h1 className="text-3xl text-center mt-6 font-semibold">Create a Listing</h1>
-            <form>
+            <form onSubmit={onSubmit}>
                 <p className="text-lg mt-6 font-medium">Sell / Rent</p>
                 <div className="flex">
                     <button type="button" id="type" value="sale" 
@@ -91,7 +212,7 @@ const CreateListing = () => {
                                         parking ? "bg-white text-black" : "bg-slate-600 text-white"
                                       }`}
                     >
-                        Rent
+                        No
                     </button>
                 </div>
                 <p className="text-lg mt-6 font-medium">Furnished</p>
@@ -124,6 +245,18 @@ const CreateListing = () => {
                                   transition duration-150 ease-in-out focus:text-gray-700 focus:bg-white focus:border-slate-600
                                   mb-6"
                 />
+                {!geoLocationEnabled && (
+                    <div className="flex items-center justify-start space-x-6 mb-6">
+                        <div className="">
+                            <p className="text-lg font-semibold">Latitude</p>
+                            <input type="number" id="latitude" value={latitude} onChange={onChange} required className="w-full px-4 py-2 text-xl text-gray-700 bg-white border border-gray-300 rounded transition duration-150 ease-in-out focus:bg-white focus:text-gray-700 focus:border-slate-600 text-center"/>
+                        </div>
+                        <div className="">
+                            <p className="text-lg font-semibold">Longitude</p>
+                            <input type="number" id="longitude" value={longitude} onChange={onChange} required className="w-full px-4 py-2 text-xl text-gray-700 bg-white border border-gray-300 rounded transition duration-150 ease-in-out focus:bg-white focus:text-gray-700 focus:border-slate-600 text-center"/>
+                        </div>
+                    </div>
+                )}
                 <p className="text-lg font-medium">Description</p>
                 <textarea type="text" id="description" value={description} 
                        onChange={onChange} placeholder="Description" minLength="5" required
