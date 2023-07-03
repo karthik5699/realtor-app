@@ -42,7 +42,7 @@ const EditListing = () => {
             toast.error("You cannot edit this listing")
             navigate("/")
         }
-    }, [])
+    }, [auth.currentUser.uid, navigate, listing])
 
     useEffect(()=> {
         setLoading(true);
