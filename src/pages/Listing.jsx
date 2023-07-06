@@ -145,7 +145,7 @@ const Listing = () => {
                     />
                     <Marker position={position}>
                     <Popup>
-                        A pretty CSS3 popup. <br /> Easily customizable.
+                        {listing.address}
                     </Popup>
                     </Marker>
                 </MapContainer>
