@@ -8,12 +8,16 @@ import {Autoplay, EffectFade, Navigation, Pagination} from 'swiper';
 import "swiper/css/bundle"
 import {FiShare} from 'react-icons/fi'
 import {FaMapMarkerAlt, FaBed, FaBath, FaParking, FaChair} from 'react-icons/fa'
+import {getAuth} from 'firebase/auth'
+import Contact from "../components/Contact";
 
 const Listing = () => {
     const params = useParams();
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
     const [shareLinkCopied, setShareLinkCopied] = useState(false);
+    const [contactLandLord, setContactLandlord] = useState(false);
+    const auth = getAuth();
 
     useEffect(() => {
         const fetchListing = async () => {
@@ -69,7 +73,7 @@ const Listing = () => {
             )}
 
             <div className="m-4 flex flex-col md:flex-row max-w-6xl lg:mx-auto p-4 rounded-lg shadow-lg bg-white lg:space-x-5">
-                <div className="w-full h-[200px] lg:h-[400px]">
+                <div className="w-full">
                     <p className="text-2xl font-bold mb-3 text-blue-900">
                         {listing.name} - Rs.{listing.offer ? Number(listing.discountedPrice).toLocaleString('hi-IN') : Number(listing.regularPrice).toLocaleString('hi-IN')}
                         {listing.type === "rent" ? " / month" : ""}
@@ -92,7 +96,7 @@ const Listing = () => {
                         <span className="font-semibold">Description - </span>
                         {listing.description}
                     </p>
-                    <ul className="flex items-center space-x-2 lg:space-x-10 text-sm font-semibold">
+                    <ul className="flex items-center space-x-2 lg:space-x-10 text-sm font-semibold mb-6">
                         <li className="flex items-center whitespace-nowrap">
                             <FaBed className="text-lg mr-1"/>
                             {Number(listing.bedrooms) > 1 ? `${listing.bedrooms} Beds` : "1 Bed"}
@@ -110,6 +114,20 @@ const Listing = () => {
                             {listing.furnished ? "Furnished" : "Not Furnished"}
                         </li>
                     </ul>
+                    {listing.userRef !== auth.currentUser?.uid && !contactLandLord && (
+                         <div className="mt-8">
+                            <button className="px-7 py-3 bg-blue-600 text-white shadow-md font-medium text-sm uppercase rounded hover:bg-blue-700 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg text-center transition duration-150 ease-in-out"
+                                    onClick={() => {setContactLandlord(true)}}
+                            >
+                                Contact
+                            </button>
+                        </div>
+                    )}
+                    {contactLandLord && (
+                        <Contact userRef={listing.userRef} listing={listing}/>
+                    )}
+                   
+                    
                 </div>
                 <div className="bg-blue-300 w-full h-[200px] lg:h-[400px] z-10 overflow-x-hidden"></div>
             </div>
